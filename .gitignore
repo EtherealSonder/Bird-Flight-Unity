@@ -1,0 +1,39 @@
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+UserSettings/
+
+# Rider & VS
+*.csproj
+*.unityproj
+*.sln
+*.suo
+*.tmp
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+.vscode/
+
+# OS & IDE
+.DS_Store
+*.apk
+*.keystore
+*.mdb
+*.opendb
+*.pidb
+*.psess
+*.suo
+*.sdf
+*.db
+*.DS_Store
+*.swp
+*.bak
+*.unitypackage
+
+# Collab
+.collab/
