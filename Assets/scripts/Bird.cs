@@ -89,10 +89,15 @@ public abstract class Bird : MonoBehaviour
                 break;
             case FlightState.Idle:
                 RelaxWings();
+                ApplyIdleDescent();
                 break;
         }
 
         movementControl();
+
+        Debug.DrawRay(body.position, body.linearVelocity, Color.cyan); // Draws velocity
+        Debug.Log($"Velocity: {body.linearVelocity} | Speed: {body.linearVelocity.magnitude}");
+
     }
 
     void UpdateState()
@@ -110,7 +115,7 @@ public abstract class Bird : MonoBehaviour
             newState = FlightState.Flapping;
         else if (verticalSpeed < -2f && forwardSpeed < 1f)
             newState = FlightState.Diving;
-        else if (forwardSpeed > 2f)
+        else if (forwardSpeed > 1f || body.linearVelocity.magnitude > 2f)
             newState = FlightState.Gliding;
         else
             newState = FlightState.Idle;
@@ -122,6 +127,19 @@ public abstract class Bird : MonoBehaviour
             lastStateChangeTime = Time.time;
         }
     }
+    void ApplyIdleDescent()
+    {
+        // If idle but still in air, add downward pull
+        if (!IsNearGround())
+            body.AddForce(Vector3.down * body.mass * 9.81f * 0.3f, ForceMode.Acceleration);
+    }
+    public float groundCheckDistance = 1.5f;
+    public LayerMask groundLayer;
+
+    bool IsNearGround()
+    {
+        return Physics.Raycast(body.position, Vector3.down, groundCheckDistance, groundLayer);
+    }
 
     void ApplyGlidePhysics()
     {
@@ -129,14 +147,21 @@ public abstract class Bird : MonoBehaviour
         float forwardSpeed = Vector3.Dot(body.linearVelocity, forward);
         float liftScale = Mathf.Clamp01(forwardSpeed / 10f);
 
+        // Reduce drag by capping at low speeds
+        float cappedSpeed = Mathf.Max(forwardSpeed, 2f);
         Vector3 lift = -body.transform.forward * liftScale * glideLiftFactor * body.mass;
-        Vector3 drag = -body.linearVelocity.normalized * forwardSpeed * glideDragFactor * body.mass;
+        Vector3 drag = -body.linearVelocity.normalized * cappedSpeed * glideDragFactor * body.mass * 0.3f;
+
 
         body.AddForce(lift);
         body.AddForce(drag);
 
-        Debug.DrawRay(body.position, lift * 0.1f, Color.green);
-        Debug.DrawRay(body.position, drag * 0.1f, Color.blue);
+
+        Vector3 forwardPush = body.transform.up * 0.5f * body.mass;
+        body.AddForce(forwardPush);
+
+        //Debug.DrawRay(body.position, lift * 0.1f, Color.green);
+        //Debug.DrawRay(body.position, drag * 0.1f, Color.blue);
     }
 
     void RelaxWings()
@@ -213,7 +238,7 @@ public abstract class Bird : MonoBehaviour
         pitchAngle = Mathf.Atan2(2 * x * w - 2 * y * z, 1 - 2 * x * x - 2 * z * z);
         rollAngle = -Mathf.Asin(2 * x * y + 2 * z * w);
     }
-
+    private float neutralPitch = Mathf.Deg2Rad * 90f;
     private void AutoLevelSimple()
     {
         if (Mathf.Abs(rollAngle) > rollThreshold && body.linearVelocity.magnitude > 1f)
@@ -221,6 +246,8 @@ public abstract class Bird : MonoBehaviour
             float rollAdjustment = Mathf.LerpAngle(rollAngle, 0f, autoLevelLerp);
             body.transform.RotateAround(body.transform.position, body.transform.up, rollLevel * Time.deltaTime * rollAdjustment);
         }
+
+
     }
 
     void FixedUpdate()
@@ -230,9 +257,18 @@ public abstract class Bird : MonoBehaviour
 
     void AlignVelocityWithFacing()
     {
+        float maxSpeed = 80f;
         Vector3 desiredDirection = body.transform.up.normalized;
         float currentSpeed = body.linearVelocity.magnitude;
 
-        body.linearVelocity = Vector3.Lerp(body.linearVelocity, desiredDirection * currentSpeed, 0.01f);
+        if (currentSpeed > maxSpeed)
+        {
+            body.linearVelocity = body.linearVelocity.normalized * maxSpeed;
+        }
+        else if (currentSpeed > 1f)
+        {
+            body.linearVelocity = Vector3.Lerp(body.linearVelocity, desiredDirection * currentSpeed, 0.005f);
+        }
     }
+
 }
