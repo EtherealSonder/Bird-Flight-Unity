@@ -1,97 +1,21 @@
 using UnityEngine;
 
-//Static classes are unable to have instances. They are useful when the class doesn't need to get or 
-// set its own fields. Statics have only one instance and that is the main class'
 public static class TerrainGeneration
 {
-    /*public static float[,] GenerateHeightMap(int width, int depth, float resolution,
-                                         int numOctaves, float lacunarity, float persistance,
-                                         int seed)
+    public static (float[,], int[,]) GenerateHeightMap(
+    int width, int depth, float resolution,
+    int numOctaves, float lacunarity, float persistance, int seed,
+    float verticalScale,
+    AnimationCurve meshHeightCurve,
+    AnimationCurve waterCurve, AnimationCurve plainsCurve, AnimationCurve mountainCurve,
+    int offsetX = 0, int offsetZ = 0)
 
     {
-        //Create an empty 2D array to store the height values
         float[,] terrainHeightArray = new float[width, depth];
-
-        //Make sure the resolution is not 0 or less
-        resolution = Mathf.Max(resolution, 0.001f);
-
-        //Keep track of the "highest" and "lowest" point
-        float maxNoiseVal = float.MinValue;
-        float minNoiseVal = float.MaxValue;
-        //(max is set to min value so the fisrt value checked is definitely larger than it and similar for min)
-
-        //Iterate through the array and assign each point to some noise
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < depth; j++) {
-                
-                Each octave (layer of noise) will have a fequency and amplitude. We start these values at 
-                1 and then each octave we multiply by the lacunarity and persistance respectively. This will 
-                make each layer of noise have higher frequency (more rapid changes) but lower influence on 
-                the total noise. This is provided that  lacunarity > 1, 0 < persistance < 1. 
-                
-                float frequency = 1f;
-                float amplitude = 1f;
-
-                //We will accumulate the noise from each octave in this variable
-                float totalNoise = 0;
-
-                //We want each octave to sample from a differnt location
-                float octaveOffset = 0;
-
-                for (int octave = 0; octave < numOctaves; octave++) {
-                    //We don't want to use the integers i and j as we want the gradual changes that come 
-                    //from values close to one another in perlin noise.
-                    //Frequency controls how far apart our sampling points are (higher means more rapid change)
-                    float x = (i / resolution) * frequency + seed + octaveOffset * width;
-                    float y = (j / resolution) * frequency + seed + octaveOffset * depth;
-
-
-                    //We want the noise to be between -1 and 1 to add OR subtract from the height
-                    totalNoise += (Mathf.PerlinNoise(x, y) * 2 - 1) * amplitude;
-
-                    //Increase the frquency and amplitude for the next octave
-                    frequency *= lacunarity;
-                    amplitude *= persistance;
-
-                    //Increase octave offset for the next sanpling layer
-                    octaveOffset++;
-                }
-
-                //Check if this is the highest or lowest point yet
-                if (totalNoise > maxNoiseVal) {
-                    maxNoiseVal = totalNoise;
-                } else if (totalNoise < minNoiseVal) {
-                    minNoiseVal = totalNoise;
-                }
-
-                //Assign the noise to the array
-                terrainHeightArray[i, j] = totalNoise;
-            }
-        }
-
-        //We now want to normalize the array to have a traditional noise result from 0 to 1;
-        float terrainHeightRange = maxNoiseVal - minNoiseVal;
-
-        for (int i = 0; i < width; i++) {
-            for (int j = 0; j < depth; j++) {
-                //Shift the values to a range 0 <-> range then divide by range
-                terrainHeightArray[i, j] = (terrainHeightArray[i, j] - minNoiseVal) / terrainHeightRange;
-            }
-        }
-        
-        //Return the noise values
-        return terrainHeightArray;
-    }*/
-
-
-    public static float[,] GenerateHeightMap(int width, int depth, float resolution,
-                                         int numOctaves, float lacunarity, float persistance,
-                                         int seed, int offsetX = 0, int offsetZ = 0)
-    {
-        float[,] terrainHeightArray = new float[width, depth];
+        int[,] biomeMap = new int[width, depth];
+        float[,] falloffMask = GenerateRadialFalloff(width, depth);
 
         resolution = Mathf.Max(resolution, 0.001f);
-
         float maxNoiseVal = float.MinValue;
         float minNoiseVal = float.MaxValue;
 
@@ -116,10 +40,11 @@ public static class TerrainGeneration
                     octaveOffset++;
                 }
 
+                totalNoise -= falloffMask[i, j];
+                terrainHeightArray[i, j] = totalNoise;
+
                 if (totalNoise > maxNoiseVal) maxNoiseVal = totalNoise;
                 if (totalNoise < minNoiseVal) minNoiseVal = totalNoise;
-
-                terrainHeightArray[i, j] = totalNoise;
             }
         }
 
@@ -129,11 +54,61 @@ public static class TerrainGeneration
         {
             for (int j = 0; j < depth; j++)
             {
-                terrainHeightArray[i, j] = (terrainHeightArray[i, j] - minNoiseVal) / range;
+                float normalized = (terrainHeightArray[i, j] - minNoiseVal) / range;
+                float shaped = normalized;
+
+                // Apply shaping curve first
+                shaped = meshHeightCurve.Evaluate(shaped);
+
+                // Multiply by vertical scale to get final Y
+                float worldY = shaped * verticalScale;
+
+                // Biome thresholds in world height units
+                if (worldY < 5f)
+                {
+                    biomeMap[i, j] = 0;
+                    shaped = waterCurve.Evaluate(normalized);
+                }
+                else if (worldY < 30f)
+                {
+                    biomeMap[i, j] = 1;
+                    shaped = plainsCurve.Evaluate(normalized);
+                }
+                else
+                {
+                    biomeMap[i, j] = 2;
+                    shaped = mountainCurve.Evaluate(normalized);
+                }
+
+                terrainHeightArray[i, j] = shaped;
+
             }
         }
 
-        return terrainHeightArray;
+        return (terrainHeightArray, biomeMap);
+    }
+
+
+    public static float[,] GenerateRadialFalloff(int width, int depth)
+    {
+        float[,] mask = new float[width, depth];
+        float centerX = width / 2f;
+        float centerY = depth / 2f;
+        float maxDist = Mathf.Sqrt(centerX * centerX + centerY * centerY);
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int y = 0; y < depth; y++)
+            {
+                float dx = x - centerX;
+                float dy = y - centerY;
+                float dist = Mathf.Sqrt(dx * dx + dy * dy);
+                float normDist = dist / maxDist;
+                mask[x, y] = Mathf.Pow(normDist, 2.5f);
+            }
+        }
+
+        return mask;
     }
 
     public static float[,] NormalizeHeightMap(float[,] heightMap)
@@ -144,7 +119,6 @@ public static class TerrainGeneration
         float min = float.MaxValue;
         float max = float.MinValue;
 
-        // Find min and max values
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < depth; j++)
@@ -156,7 +130,6 @@ public static class TerrainGeneration
 
         float range = max - min;
 
-        // Normalize
         for (int i = 0; i < width; i++)
         {
             for (int j = 0; j < depth; j++)
@@ -208,6 +181,7 @@ public static class TerrainGeneration
 
         return mesh;
     }
+
     public static void ApplyThermalErosion(ref float[,] heightMap, int iterations, float talus = 0.02f, float erosionFactor = 0.5f)
     {
         int width = heightMap.GetLength(0);
@@ -246,5 +220,4 @@ public static class TerrainGeneration
             heightMap = newHeights;
         }
     }
-
 }
