@@ -21,16 +21,33 @@ public class TerrainManager : MonoBehaviour
     [Range(0, 1)]
     public float persistance;
 
+    [Header("Regional Variation Settings")]
+    [Tooltip("Controls how large the region noise patches are (lower = larger zones)")]
+    public float regionNoiseScale = 0.002f;
+
+    [Tooltip("Min Y for water in flat-biased regions")]
+    public float waterThresholdFlat = 10f;
+
+    [Tooltip("Min Y for water in mountain-biased regions")]
+    public float waterThresholdMountain = 5f;
+
+    [Tooltip("Min Y for plains in flat-biased regions")]
+    public float plainsThresholdFlat = 40f;
+
+    [Tooltip("Min Y for plains in mountain-biased regions")]
+    public float plainsThresholdMountain = 30f;
+
     [Header("Noise Randomization")]
     public int noiseSeed;
     public bool randomizeSeedOnGenerate = false;
 
-    [Header("Erosion Settings")]
+    [Header("Thermal Erosion Settings")]
     public int erosionIterations = 20;
     [Range(0f, 1f)]
     public float erosionFactor = 0.25f;
     [Range(0f, 1f)]
     public float talus = 0.02f;
+
 
     [Header("Tiling Settings")]
     public int chunkSize = 128;
@@ -38,6 +55,17 @@ public class TerrainManager : MonoBehaviour
 
     [Header("Material Settings")]
     public Material terrainMaterial;
+
+    [Header("Lake Settings")]
+    public float lakeHeightThreshold = 0.2f; // normalized height value
+    public float worldWaterY = 5f; // the actual flat Y to place water mesh
+    public Material waterMaterial;
+    [Range(0f, 1f)]
+    public float lakeWaveHeight = 0.3f;
+
+    [Range(0.01f, 1f)]
+    public float lakeWaveFrequency = 0.2f;
+
 
     void OnValidate()
     {
@@ -49,8 +77,11 @@ public class TerrainManager : MonoBehaviour
 
     void Start()
     {
-        GenerateTerrain();
+        //GenerateTerrain();
     }
+
+  
+
 
     public void GenerateTerrain()
     {
@@ -68,16 +99,22 @@ public class TerrainManager : MonoBehaviour
 
         // Generate height and biome maps
         (float[,] globalHeightMap, int[,] biomeMap) = TerrainGeneration.GenerateHeightMap(
-      meshWidth + 1, meshDepth + 1,
-      resolution, numberOfOctaves, lacunarity, persistance,
-      noiseSeed,
-      verticalScale,
-      meshHeightCurve,
-      waterHeightCurve, plainsHeightCurve, mountainHeightCurve
-  );
+    meshWidth + 1, meshDepth + 1,
+    resolution, numberOfOctaves, lacunarity, persistance,
+    noiseSeed,
+    verticalScale,
+    meshHeightCurve,
+    waterHeightCurve, plainsHeightCurve, mountainHeightCurve,
+    regionNoiseScale,
+    waterThresholdFlat, waterThresholdMountain,
+    plainsThresholdFlat, plainsThresholdMountain
+);
+
 
 
         TerrainGeneration.ApplyThermalErosion(ref globalHeightMap, erosionIterations, talus, erosionFactor);
+
+
         globalHeightMap = TerrainGeneration.NormalizeHeightMap(globalHeightMap);
 
         int numChunksX = Mathf.CeilToInt((float)meshWidth / chunkSize);
@@ -100,6 +137,8 @@ public class TerrainManager : MonoBehaviour
                 for (int x = 0; x < safeX; x++)
                     for (int z = 0; z < safeZ; z++)
                         heightMap[x, z] = globalHeightMap[startX + x, startZ + z];
+
+
 
                 Mesh mesh = TerrainGeneration.GenerateMesh(heightMap, verticalScale, meshHeightCurve);
 
@@ -129,6 +168,28 @@ public class TerrainManager : MonoBehaviour
 
                 MeshCollider mc = chunk.AddComponent<MeshCollider>();
                 mc.sharedMesh = mesh;
+
+                bool[,] lakeMaskFull = TerrainGeneration.GenerateLakeMask(globalHeightMap, lakeHeightThreshold);
+
+                // Extract 1-tile-padded region for smoother transitions
+                bool[,] lakeMask = new bool[safeX, safeZ];
+                for (int x = 0; x < safeX; x++)
+                    for (int z = 0; z < safeZ; z++)
+                        lakeMask[x, z] = lakeMaskFull[startX + x, startZ + z];
+
+
+                Mesh waterMesh = TerrainGeneration.GenerateFlatWaterMesh(lakeMask, worldWaterY);
+
+                GameObject waterObj = new GameObject($"Water_{cx}_{cz}");
+                waterObj.transform.parent = chunk.transform;
+                waterObj.transform.localPosition = Vector3.zero;
+
+                MeshFilter wf = waterObj.AddComponent<MeshFilter>();
+                wf.sharedMesh = waterMesh;
+
+                MeshRenderer wr = waterObj.AddComponent<MeshRenderer>();
+                wr.sharedMaterial = waterMaterial;
+
             }
         }
     }

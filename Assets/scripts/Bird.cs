@@ -96,7 +96,7 @@ public abstract class Bird : MonoBehaviour
         movementControl();
 
         Debug.DrawRay(body.position, body.linearVelocity, Color.cyan); // Draws velocity
-        Debug.Log($"Velocity: {body.linearVelocity} | Speed: {body.linearVelocity.magnitude}");
+        //Debug.Log($"Velocity: {body.linearVelocity} | Speed: {body.linearVelocity.magnitude}");
 
     }
 

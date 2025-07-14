@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 public static class TerrainGeneration
@@ -8,8 +9,10 @@ public static class TerrainGeneration
     float verticalScale,
     AnimationCurve meshHeightCurve,
     AnimationCurve waterCurve, AnimationCurve plainsCurve, AnimationCurve mountainCurve,
+    float regionNoiseScale, // NEW PARAMETER
+    float waterThresholdFlat, float waterThresholdMountain,
+    float plainsThresholdFlat, float plainsThresholdMountain,
     int offsetX = 0, int offsetZ = 0)
-
     {
         float[,] terrainHeightArray = new float[width, depth];
         int[,] biomeMap = new int[width, depth];
@@ -55,21 +58,24 @@ public static class TerrainGeneration
             for (int j = 0; j < depth; j++)
             {
                 float normalized = (terrainHeightArray[i, j] - minNoiseVal) / range;
-                float shaped = normalized;
-
-                // Apply shaping curve first
-                shaped = meshHeightCurve.Evaluate(shaped);
-
-                // Multiply by vertical scale to get final Y
+                float shaped = meshHeightCurve.Evaluate(normalized);
                 float worldY = shaped * verticalScale;
 
-                // Biome thresholds in world height units
-                if (worldY < 5f)
+                // Sample low-frequency region noise
+                float regionNoise = Mathf.PerlinNoise((i + seed) * regionNoiseScale, (j + seed) * regionNoiseScale);
+                float flatBias = regionNoise; // 0 = mountain-prone, 1 = flat-prone
+
+                // Blend thresholds based on region
+                float waterThreshold = Mathf.Lerp(waterThresholdMountain, waterThresholdFlat, flatBias);
+                float plainsThreshold = Mathf.Lerp(plainsThresholdMountain, plainsThresholdFlat, flatBias);
+
+                // Assign biome based on blended thresholds
+                if (worldY < waterThreshold)
                 {
                     biomeMap[i, j] = 0;
                     shaped = waterCurve.Evaluate(normalized);
                 }
-                else if (worldY < 30f)
+                else if (worldY < plainsThreshold)
                 {
                     biomeMap[i, j] = 1;
                     shaped = plainsCurve.Evaluate(normalized);
@@ -81,12 +87,12 @@ public static class TerrainGeneration
                 }
 
                 terrainHeightArray[i, j] = shaped;
-
             }
         }
 
         return (terrainHeightArray, biomeMap);
     }
+
 
 
     public static float[,] GenerateRadialFalloff(int width, int depth)
@@ -182,6 +188,81 @@ public static class TerrainGeneration
         return mesh;
     }
 
+    public static bool[,] GenerateLakeMask(float[,] heightMap, float lakeThreshold)
+    {
+        int width = heightMap.GetLength(0);
+        int depth = heightMap.GetLength(1);
+
+        bool[,] lakeMask = new bool[width, depth];
+
+        for (int x = 0; x < width; x++)
+        {
+            for (int z = 0; z < depth; z++)
+            {
+                if (heightMap[x, z] < lakeThreshold)
+                    lakeMask[x, z] = true;
+            }
+        }
+
+        return lakeMask;
+    }
+
+    public static Mesh GenerateFlatWaterMesh(bool[,] lakeMask, float baseHeight)
+    {
+        int width = lakeMask.GetLength(0);
+        int height = lakeMask.GetLength(1);
+
+        List<Vector3> vertices = new List<Vector3>();
+        List<int> triangles = new List<int>();
+        List<Vector2> uvs = new List<Vector2>();
+
+        float offsetX = (width - 1) / 2f;
+        float offsetZ = (height - 1) / 2f;
+
+        for (int x = 0; x < width - 1; x++)
+        {
+            for (int z = 0; z < height - 1; z++)
+            {
+                if (lakeMask[x, z] && lakeMask[x + 1, z] && lakeMask[x, z + 1] && lakeMask[x + 1, z + 1])
+                {
+                    Vector3 v00 = new Vector3(x - offsetX, baseHeight, z - offsetZ);
+                    Vector3 v10 = new Vector3(x + 1 - offsetX, baseHeight, z - offsetZ);
+                    Vector3 v01 = new Vector3(x - offsetX, baseHeight, z + 1 - offsetZ);
+                    Vector3 v11 = new Vector3(x + 1 - offsetX, baseHeight, z + 1 - offsetZ);
+
+                    int startIndex = vertices.Count;
+
+                    vertices.Add(v00); // 0
+                    vertices.Add(v10); // 1
+                    vertices.Add(v01); // 2
+                    vertices.Add(v11); // 3
+
+                    uvs.Add(new Vector2(0, 0));
+                    uvs.Add(new Vector2(1, 0));
+                    uvs.Add(new Vector2(0, 1));
+                    uvs.Add(new Vector2(1, 1));
+
+                    triangles.Add(startIndex + 0);
+                    triangles.Add(startIndex + 2);
+                    triangles.Add(startIndex + 1);
+
+                    triangles.Add(startIndex + 1);
+                    triangles.Add(startIndex + 2);
+                    triangles.Add(startIndex + 3);
+                }
+            }
+        }
+
+        Mesh mesh = new Mesh();
+        mesh.SetVertices(vertices);
+        mesh.SetTriangles(triangles, 0);
+        mesh.SetUVs(0, uvs);
+        mesh.RecalculateNormals();
+
+        return mesh;
+    }
+
+
     public static void ApplyThermalErosion(ref float[,] heightMap, int iterations, float talus = 0.02f, float erosionFactor = 0.5f)
     {
         int width = heightMap.GetLength(0);
@@ -220,4 +301,10 @@ public static class TerrainGeneration
             heightMap = newHeights;
         }
     }
+
+
+   
+
+
+
 }
