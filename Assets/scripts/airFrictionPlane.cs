@@ -100,7 +100,6 @@ public class airFrictionPlane : MonoBehaviour {
 		Vector3 otherCenter = other.bounds.center;
 		//Vector3 otherExtents = other.bounds.extents;
 		float approximatelyRadious = other.bounds.extents.magnitude;
-		Debug.Log(other.bounds.ToString());
 	}
 
 	void calculatePlaneScale(Vector3 planeGlobalScale)

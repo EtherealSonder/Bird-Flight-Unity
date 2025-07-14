@@ -15,11 +15,11 @@ RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 10
   m_Fog: 0
-  m_FogColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
-  m_FogMode: 3
+  m_FogColor: {r: 0.75, g: 0.78, b: 0.8, a: 1}
+  m_FogMode: 1
   m_FogDensity: 0.01
-  m_LinearFogStart: 0
-  m_LinearFogEnd: 300
+  m_LinearFogStart: 100
+  m_LinearFogEnd: 1000
   m_AmbientSkyColor: {r: 0.212, g: 0.227, b: 0.259, a: 1}
   m_AmbientEquatorColor: {r: 0.114, g: 0.125, b: 0.133, a: 1}
   m_AmbientGroundColor: {r: 0.047, g: 0.043, b: 0.035, a: 1}
@@ -5364,7 +5364,7 @@ MonoBehaviour:
   terrainManager: {fileID: 1945691986}
   playerBody: {fileID: 1894292814905168223}
   terrainParent: {fileID: 1633041479}
-  viewDistance: 2
+  viewDistance: 4
   poolInitialSize: 20
 --- !u!4 &1492576790
 Transform:
@@ -5458,8 +5458,8 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
-      time: 0.4
-      value: 0.2
+      time: 0.3
+      value: 0.15
       inSlope: 0.84583265
       outSlope: 0.84583265
       tangentMode: 136
@@ -5469,14 +5469,14 @@ MonoBehaviour:
     - serializedVersion: 3
       time: 0.6
       value: 0.5
-      inSlope: 1.3333333
-      outSlope: 1.3333333
+      inSlope: 1.2105387
+      outSlope: 1.2105387
       tangentMode: 136
       weightedMode: 0
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
-      time: 1
+      time: 1.0021667
       value: 1
       inSlope: 0
       outSlope: 0
@@ -5500,8 +5500,17 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
+      time: 0.5
+      value: 0.02
+      inSlope: 0.032973126
+      outSlope: 0.032973126
+      tangentMode: 136
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
       time: 1
-      value: 0.05
+      value: 0.03
       inSlope: 0
       outSlope: 0
       tangentMode: 136
@@ -5566,26 +5575,26 @@ MonoBehaviour:
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
-      time: 0.4
-      value: 0.25
-      inSlope: 0.9425154
-      outSlope: 0.9425154
+      time: 0.3
+      value: 0.2
+      inSlope: 0.93917996
+      outSlope: 0.93917996
       tangentMode: 136
       weightedMode: 0
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
       time: 0.85
-      value: 0.8
-      inSlope: 1.2561008
-      outSlope: 1.2561008
+      value: 0.79798585
+      inSlope: 1.1428572
+      outSlope: 1.1428572
       tangentMode: 136
       weightedMode: 0
       inWeight: 0.33333334
       outWeight: 0.33333334
     - serializedVersion: 3
-      time: 0.9955851
-      value: 0.99811494
+      time: 1
+      value: 1
       inSlope: 0
       outSlope: 0
       tangentMode: 136
@@ -5595,17 +5604,18 @@ MonoBehaviour:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
-  verticalScale: 60
+  verticalScale: 100
   resolution: 80
   numberOfOctaves: 4
   lacunarity: 2
-  persistance: 0.5
-  regionNoiseScale: 0.0001
-  waterThresholdFlat: 20
-  waterThresholdMountain: 15
-  plainsThresholdFlat: 40
-  plainsThresholdMountain: 40
-  noiseSeed: -25166
+  persistance: 0.35
+  regionNoiseScale: 0.00015
+  waterThresholdFlat: 25
+  waterThresholdMountain: 25
+  plainsThresholdFlat: 60
+  plainsThresholdMountain: 5
+  peakNoisePower: 6.01
+  noiseSeed: -86898
   randomizeSeedOnGenerate: 1
   erosionIterations: 20
   erosionFactor: 0.2
@@ -5613,11 +5623,17 @@ MonoBehaviour:
   chunkSize: 128
   terrainParent: {fileID: 1633041479}
   terrainMaterial: {fileID: 2100000, guid: 8a1b2fd885219b34f9e0fe24ad1686cb, type: 2}
-  lakeHeightThreshold: 0.2
+  lakeHeightThreshold: 0.4
   worldWaterY: 5
   waterMaterial: {fileID: 2100000, guid: 2bdbe2dfe3e27c04d86664a02b085b50, type: 2}
   lakeWaveHeight: 0.3
   lakeWaveFrequency: 0.2
+  enableFog: 0
+  fogColor: {r: 0.75, g: 0.78, b: 0.8, a: 1}
+  fogMode: 1
+  fogStartDistance: 100
+  fogEndDistance: 1000
+  fogDensity: 0.0078
 --- !u!23 &1945691987
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -5681,7 +5697,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 2, y: 2, z: 2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
@@ -6876,7 +6892,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1913902320760464653}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -6892,7 +6908,7 @@ MeshRenderer:
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1402773d7ce4e8c448a7b324b4de2432, type: 2}
+  - {fileID: 2100000, guid: 7017102876a163e458acad8867e64707, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -6966,7 +6982,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1913022711413861531}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -6982,7 +6998,7 @@ MeshRenderer:
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1402773d7ce4e8c448a7b324b4de2432, type: 2}
+  - {fileID: 2100000, guid: 7017102876a163e458acad8867e64707, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7101,7 +7117,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1913048416750593967}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -7117,7 +7133,7 @@ MeshRenderer:
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1402773d7ce4e8c448a7b324b4de2432, type: 2}
+  - {fileID: 2100000, guid: 7017102876a163e458acad8867e64707, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7146,7 +7162,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1913647927473065499}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -7162,7 +7178,7 @@ MeshRenderer:
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1402773d7ce4e8c448a7b324b4de2432, type: 2}
+  - {fileID: 2100000, guid: 7017102876a163e458acad8867e64707, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7191,7 +7207,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1913342872903941505}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -7207,7 +7223,7 @@ MeshRenderer:
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1402773d7ce4e8c448a7b324b4de2432, type: 2}
+  - {fileID: 2100000, guid: 7017102876a163e458acad8867e64707, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -7236,7 +7252,7 @@ MeshRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1913487942676109965}
-  m_Enabled: 0
+  m_Enabled: 1
   m_CastShadows: 1
   m_ReceiveShadows: 1
   m_DynamicOccludee: 1
@@ -7252,7 +7268,7 @@ MeshRenderer:
   m_RenderingLayerMask: 4294967295
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 1402773d7ce4e8c448a7b324b4de2432, type: 2}
+  - {fileID: 2100000, guid: 7017102876a163e458acad8867e64707, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

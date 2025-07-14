@@ -9,9 +9,10 @@ public static class TerrainGeneration
     float verticalScale,
     AnimationCurve meshHeightCurve,
     AnimationCurve waterCurve, AnimationCurve plainsCurve, AnimationCurve mountainCurve,
-    float regionNoiseScale, // NEW PARAMETER
+    float regionNoiseScale,
     float waterThresholdFlat, float waterThresholdMountain,
     float plainsThresholdFlat, float plainsThresholdMountain,
+    float peakNoisePower,
     int offsetX = 0, int offsetZ = 0)
     {
         float[,] terrainHeightArray = new float[width, depth];
@@ -58,7 +59,14 @@ public static class TerrainGeneration
             for (int j = 0; j < depth; j++)
             {
                 float normalized = (terrainHeightArray[i, j] - minNoiseVal) / range;
-                float shaped = meshHeightCurve.Evaluate(normalized);
+
+                // --- NEW: Region-based height peak variation ---
+                float peakBaseNoise = Mathf.PerlinNoise((i + offsetX + seed) * 0.01f, (j + offsetZ + seed) * 0.01f);
+                float regionModulator = Mathf.PerlinNoise((i + offsetX + seed) * 0.001f, (j + offsetZ + seed) * 0.001f); // large regional zones
+
+                float peakModifier = Mathf.Pow(peakBaseNoise * regionModulator, peakNoisePower);
+                float shaped = meshHeightCurve.Evaluate(normalized) * (0.8f + 0.2f * peakModifier);
+
                 float worldY = shaped * verticalScale;
 
                 // Sample low-frequency region noise
@@ -92,6 +100,7 @@ public static class TerrainGeneration
 
         return (terrainHeightArray, biomeMap);
     }
+
 
 
 

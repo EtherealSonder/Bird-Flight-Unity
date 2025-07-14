@@ -42,7 +42,8 @@ public class TerrainHeightExporter : MonoBehaviour
             terrainManager.waterThresholdFlat,
             terrainManager.waterThresholdMountain,
             terrainManager.plainsThresholdFlat,
-            terrainManager.plainsThresholdMountain
+            terrainManager.plainsThresholdMountain,
+            terrainManager.peakNoisePower
         );
 
         TerrainGeneration.ApplyThermalErosion(ref heightMap, terrainManager.erosionIterations, terrainManager.talus, terrainManager.erosionFactor);

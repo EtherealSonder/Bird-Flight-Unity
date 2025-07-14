@@ -108,7 +108,8 @@ public class TerrainStreamer : MonoBehaviour
             terrainManager.waterThresholdFlat,
             terrainManager.waterThresholdMountain,
             terrainManager.plainsThresholdFlat,
-            terrainManager.plainsThresholdMountain
+            terrainManager.plainsThresholdMountain,
+            terrainManager.peakNoisePower
         );
 
         TerrainGeneration.ApplyThermalErosion(ref globalHeightMap, terrainManager.erosionIterations, terrainManager.talus, terrainManager.erosionFactor);

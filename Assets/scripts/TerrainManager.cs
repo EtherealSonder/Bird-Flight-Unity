@@ -37,6 +37,10 @@ public class TerrainManager : MonoBehaviour
     [Tooltip("Min Y for plains in mountain-biased regions")]
     public float plainsThresholdMountain = 30f;
 
+    [Header("Peak Variation Settings")]
+    [Range(1f, 8f)]
+    public float peakNoisePower = 5f;
+
     [Header("Noise Randomization")]
     public int noiseSeed;
     public bool randomizeSeedOnGenerate = false;
@@ -47,7 +51,6 @@ public class TerrainManager : MonoBehaviour
     public float erosionFactor = 0.25f;
     [Range(0f, 1f)]
     public float talus = 0.02f;
-
 
     [Header("Tiling Settings")]
     public int chunkSize = 128;
@@ -66,6 +69,37 @@ public class TerrainManager : MonoBehaviour
     [Range(0.01f, 1f)]
     public float lakeWaveFrequency = 0.2f;
 
+    [Header("Fog Settings")]
+    public bool enableFog = true;
+    public Color fogColor = new Color(0.75f, 0.78f, 0.8f);
+
+    public FogMode fogMode = FogMode.Linear;
+    public float fogStartDistance = 100f;
+    public float fogEndDistance = 350f;         // Used in Linear mode
+    [Range(0.0001f, 0.1f)]
+    public float fogDensity = 0.0025f;          // Used in Exponential/Exp2
+
+
+    public void ApplyFogSettings()
+    {
+        RenderSettings.fog = enableFog;
+        RenderSettings.fogColor = fogColor;
+        RenderSettings.fogMode = fogMode;
+
+        if (fogMode == FogMode.Linear)
+        {
+            RenderSettings.fogStartDistance = fogStartDistance;
+            RenderSettings.fogEndDistance = fogEndDistance;
+        }
+        else
+        {
+            RenderSettings.fogDensity = fogDensity;
+        }
+    }
+    void Start()
+    {
+        ApplyFogSettings();
+    }
 
     void OnValidate()
     {
@@ -75,19 +109,10 @@ public class TerrainManager : MonoBehaviour
         if (numberOfOctaves < 0) numberOfOctaves = 0;
     }
 
-    void Start()
-    {
-        //GenerateTerrain();
-    }
-
-  
-
-
     public void GenerateTerrain()
     {
         if (!Application.isPlaying && !Application.isEditor) return;
 
-        // Clear existing chunks
         if (terrainParent != null)
         {
             for (int i = terrainParent.childCount - 1; i >= 0; i--)
@@ -97,24 +122,20 @@ public class TerrainManager : MonoBehaviour
         if (randomizeSeedOnGenerate)
             noiseSeed = Random.Range(-100000, 100000);
 
-        // Generate height and biome maps
         (float[,] globalHeightMap, int[,] biomeMap) = TerrainGeneration.GenerateHeightMap(
-    meshWidth + 1, meshDepth + 1,
-    resolution, numberOfOctaves, lacunarity, persistance,
-    noiseSeed,
-    verticalScale,
-    meshHeightCurve,
-    waterHeightCurve, plainsHeightCurve, mountainHeightCurve,
-    regionNoiseScale,
-    waterThresholdFlat, waterThresholdMountain,
-    plainsThresholdFlat, plainsThresholdMountain
-);
-
-
+            meshWidth + 1, meshDepth + 1,
+            resolution, numberOfOctaves, lacunarity, persistance,
+            noiseSeed,
+            verticalScale,
+            meshHeightCurve,
+            waterHeightCurve, plainsHeightCurve, mountainHeightCurve,
+            regionNoiseScale,
+            waterThresholdFlat, waterThresholdMountain,
+            plainsThresholdFlat, plainsThresholdMountain,
+            peakNoisePower
+        );
 
         TerrainGeneration.ApplyThermalErosion(ref globalHeightMap, erosionIterations, talus, erosionFactor);
-
-
         globalHeightMap = TerrainGeneration.NormalizeHeightMap(globalHeightMap);
 
         int numChunksX = Mathf.CeilToInt((float)meshWidth / chunkSize);
@@ -138,20 +159,7 @@ public class TerrainManager : MonoBehaviour
                     for (int z = 0; z < safeZ; z++)
                         heightMap[x, z] = globalHeightMap[startX + x, startZ + z];
 
-
-
                 Mesh mesh = TerrainGeneration.GenerateMesh(heightMap, verticalScale, meshHeightCurve);
-
-                // Debug actual vertex Y range
-                float minY = float.MaxValue;
-                float maxY = float.MinValue;
-
-                foreach (Vector3 v in mesh.vertices)
-                {
-                    if (v.y < minY) minY = v.y;
-                    if (v.y > maxY) maxY = v.y;
-                }
-
 
                 GameObject chunk = new GameObject($"TerrainChunk_{cx}_{cz}");
                 chunk.transform.parent = terrainParent;
@@ -164,19 +172,16 @@ public class TerrainManager : MonoBehaviour
                 terrainMaterial.SetFloat("_MinHeight", 0f);
                 terrainMaterial.SetFloat("_MaxHeight", verticalScale * meshHeightCurve.Evaluate(1f));
                 mr.sharedMaterial = terrainMaterial;
-                Debug.Log($"Shader _MaxHeight: {verticalScale * meshHeightCurve.Evaluate(1f)}");
 
                 MeshCollider mc = chunk.AddComponent<MeshCollider>();
                 mc.sharedMesh = mesh;
 
                 bool[,] lakeMaskFull = TerrainGeneration.GenerateLakeMask(globalHeightMap, lakeHeightThreshold);
 
-                // Extract 1-tile-padded region for smoother transitions
                 bool[,] lakeMask = new bool[safeX, safeZ];
                 for (int x = 0; x < safeX; x++)
                     for (int z = 0; z < safeZ; z++)
                         lakeMask[x, z] = lakeMaskFull[startX + x, startZ + z];
-
 
                 Mesh waterMesh = TerrainGeneration.GenerateFlatWaterMesh(lakeMask, worldWaterY);
 
@@ -189,8 +194,14 @@ public class TerrainManager : MonoBehaviour
 
                 MeshRenderer wr = waterObj.AddComponent<MeshRenderer>();
                 wr.sharedMaterial = waterMaterial;
-
             }
         }
+    }
+
+    void Update()
+    {
+#if UNITY_EDITOR
+        ApplyFogSettings();  // Live-tweak fog while editor is running
+#endif
     }
 }
